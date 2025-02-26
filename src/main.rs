@@ -1,9 +1,7 @@
-//use assert_cmd::output;
 use clap::Parser;
 use regex::Regex;
 use std::fs::File;
 use std::io::{self, BufRead};
-
 
 
 #[derive(Parser, Debug)]
@@ -19,7 +17,6 @@ struct Args {
 }
 
 fn main() -> Result<(), io::Error> {
-
     // Get the command-line arguments
     let args = Args::parse();
 
@@ -34,22 +31,62 @@ fn main() -> Result<(), io::Error> {
             format!("Error opening TOSCA file '{}': {}", &args.tosca_file.display(), error),
         )
     })?;
+    
+
+
+    let result = find_start(file);
+    match result {
+        Ok((start_found, deployable)) => {
+            if start_found {
+                if deployable {
+                    println!("PASS");
+                } else {
+                    println!("TOSCA file is valid but not deployable");
+                    std::process::exit(1);
+                }
+            } else {
+                eprintln!("TOSCA start line not found");
+                std::process::exit(1);
+            }
+        }
+        Err(error) => {
+            println!("Error: {}", error);
+        }
+    }
+    Ok(())
+    
+}
+
+
+fn find_start(file: File) -> Result<(bool, bool), io::Error> {
+    
+    let mut start_found = false;
+    let mut deployable = true;
+    let start_found_regex = Regex::new(r"tosca_definitions_version:").unwrap();
+    let not_deployable_regex = Regex::new(r"not deployable").unwrap();
+
     let reader = io::BufReader::new(file);
 
-
-    let start_regex = Regex::new(r"^tosca_definitions_version: tosca_2.0").unwrap();
-
     for line in reader.lines() {
-        let line = line?;
+        match line {
+            Ok(line) => {
+                if start_found_regex.is_match(line.trim()) {
+                    // Found the start first line of TOSCA file
+                    start_found = true;
+                }
 
-        if start_regex.is_match(line.trim()) {
-            // Found the start first line of TOSCA file
-            println!("PASS");
-            return Ok(());
+                if start_found {
+                    if not_deployable_regex.is_match(line.trim()) {
+                        deployable = false;
+                        break;
+                    }
+                }
+            }
+            Err(error) => {
+                return Err(io::Error::new(io::ErrorKind::Other, format!("Error reading line: {}", error)));
+            }
         }
-        continue;
-        
     }
-    // Have not found the start of the TOSCA file
-    Err(io::Error::new(io::ErrorKind::Other, "TOSCA start line not found"))
+    Ok((start_found, deployable))
 }
+

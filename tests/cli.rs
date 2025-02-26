@@ -57,3 +57,14 @@ fn file_not_ok() -> Result<(), Box<dyn std::error::Error>> {
         .failure();
     Ok(())
 }
+
+#[test]
+fn file_not_deployable() -> Result<(), Box<dyn std::error::Error>> {
+    let mut cmd = Command::cargo_bin("my_tosca_tool")?;
+
+    cmd.arg("-t").arg("examples/undeployable.yaml");
+    cmd.assert()
+        .failure()
+        .stdout(predicate::str::contains("TOSCA file is valid but not deployable"));
+    Ok(())
+}
