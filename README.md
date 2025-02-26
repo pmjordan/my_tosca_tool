@@ -31,6 +31,9 @@ To use the tool, run the following command:
 --tosca_file <path> // pass the path to a file which is to evaluated
 ```
 
+## Operation
+If the supplied file contains a TOSCA header then it will normally reported as a PASS, the exception is if it also contains 'not deployable' in which case it will reported as valid but undeployable.
+
 ## Contributing
 
 Contributions are welcome! Please open an issue or submit a pull request on GitHub.
